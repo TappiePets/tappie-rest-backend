@@ -58,10 +58,57 @@ async function updateLostStatus(handle, status, res) {
 }
 
 app.get('/mark-lost', async (req, res) => {
-  const handle = req.query.handle;
-  if (!handle) return res.status(400).send("Missing 'handle'");
-  await updateLostStatus(handle, true, res);
+  const { handle, location } = req.query;
+
+  if (!handle) {
+    return res.status(400).json({ error: 'Missing handle' });
+  }
+
+  console.log(`📍 Marking ${handle} as LOST with location: ${location || 'N/A'}`);
+
+  try {
+    const response = await fetch(graphqlEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': SHOPIFY_ADMIN_TOKEN,
+      },
+      body: JSON.stringify({
+        query: `
+          mutation UpdatePetProfile($handle: String!, $lost: Boolean!, $location: String) {
+            metaobjectUpdate(handle: $handle, type: "pet_profile", metaobject: {
+              fields: [
+                { key: "lost_status", value: $lost },
+                { key: "last_seen_location", value: $location }
+              ]
+            }) {
+              metaobject { id }
+              userErrors { field, message }
+            }
+          }
+        `,
+        variables: {
+          handle: handle,
+          lost: true,
+          location: location || ''
+        }
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.errors || result.data?.metaobjectUpdate?.userErrors?.length) {
+      console.error('❌ Error:', result.errors || result.data.metaobjectUpdate.userErrors);
+      return res.status(500).json({ error: 'GraphQL update failed', detail: result });
+    }
+
+    res.status(200).send('OK');
+  } catch (err) {
+    console.error('❌ Exception:', err);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
 });
+
 
 app.get('/mark-found', async (req, res) => {
   const handle = req.query.handle;
