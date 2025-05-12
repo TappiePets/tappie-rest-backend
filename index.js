@@ -5,6 +5,7 @@ const PORT = process.env.PORT || 3000;
 
 const SHOPIFY_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 const SHOPIFY_SHOP = process.env.SHOPIFY_SHOP_NAME;
+const graphqlEndpoint = `https://${SHOPIFY_SHOP}.myshopify.com/admin/api/2023-10/graphql.json`;
 const METAFIELD_NAMESPACE = "custom";
 const METAFIELD_KEY = "lost_status";
 
